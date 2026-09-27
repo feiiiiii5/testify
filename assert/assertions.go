@@ -1711,6 +1711,11 @@ func ErrorContains(t TestingT, theError error, contains string, msgAndArgs ...in
 func matchRegexp(rx interface{}, str interface{}) bool {
 	var r *regexp.Regexp
 	if rr, ok := rx.(*regexp.Regexp); ok {
+		// A typed nil passes the type assertion, and calling MatchString on it
+		// would dereference nil. There is no pattern, so nothing can match.
+		if rr == nil {
+			return false
+		}
 		r = rr
 	} else {
 		r = regexp.MustCompile(fmt.Sprint(rx))
@@ -2009,6 +2014,18 @@ func Eventually(t TestingT, condition func() bool, waitFor time.Duration, tick t
 		h.Helper()
 	}
 
+	// A nil condition would be dereferenced on the goroutine below, where the
+	// panic cannot be recovered by the caller and takes the whole binary down.
+	if condition == nil {
+		return Fail(t, "Condition must not be nil", msgAndArgs...)
+	}
+
+	// The ticker is created unconditionally, but it is only ever read after the
+	// first result, and time.NewTicker panics on a non-positive interval.
+	if tick <= 0 {
+		return Fail(t, "Tick must be positive", msgAndArgs...)
+	}
+
 	ch := make(chan bool, 1)
 	checkCond := func() { ch <- condition() }
 
@@ -2104,6 +2121,18 @@ func EventuallyWithT(t TestingT, condition func(collect *CollectT), waitFor time
 		h.Helper()
 	}
 
+	// A nil condition would be dereferenced on the goroutine below, where the
+	// panic cannot be recovered by the caller and takes the whole binary down.
+	if condition == nil {
+		return Fail(t, "Condition must not be nil", msgAndArgs...)
+	}
+
+	// The ticker is created unconditionally, but it is only ever read after the
+	// first result, and time.NewTicker panics on a non-positive interval.
+	if tick <= 0 {
+		return Fail(t, "Tick must be positive", msgAndArgs...)
+	}
+
 	var lastFinishedTickErrs []error
 	ch := make(chan *CollectT, 1)
 
@@ -2154,6 +2183,18 @@ func EventuallyWithT(t TestingT, condition func(collect *CollectT), waitFor time
 func Never(t TestingT, condition func() bool, waitFor time.Duration, tick time.Duration, msgAndArgs ...interface{}) bool {
 	if h, ok := t.(tHelper); ok {
 		h.Helper()
+	}
+
+	// A nil condition would be dereferenced on the goroutine below, where the
+	// panic cannot be recovered by the caller and takes the whole binary down.
+	if condition == nil {
+		return Fail(t, "Condition must not be nil", msgAndArgs...)
+	}
+
+	// The ticker is created unconditionally, but it is only ever read after the
+	// first result, and time.NewTicker panics on a non-positive interval.
+	if tick <= 0 {
+		return Fail(t, "Tick must be positive", msgAndArgs...)
 	}
 
 	ch := make(chan bool, 1)
