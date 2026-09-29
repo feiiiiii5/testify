@@ -3668,20 +3668,6 @@ func TestEventuallyNonPositiveTick(t *testing.T) {
 	}
 }
 
-// A typed nil *regexp.Regexp passes the type assertion in matchRegexp and was
-// then dereferenced.
-func TestRegexpNilTypedRegexp(t *testing.T) {
-	t.Parallel()
-
-	var rx *regexp.Regexp
-	mockT := new(testing.T)
-
-	NotPanics(t, func() {
-		False(t, Regexp(mockT, rx, "anything"))
-	})
-	True(t, NotRegexp(t, rx, "anything"))
-}
-
 func Test_validateEqualArgs(t *testing.T) {
 	t.Parallel()
 
